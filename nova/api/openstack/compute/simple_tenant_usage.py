@@ -27,6 +27,21 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 
+from oslo_config import cfg # jeremy
+billing_group = cfg.OptGroup(name='billing',title='billing')
+billing_opts = [
+                 cfg.FloatOpt('cpu_rate',default=0.0,help=''),
+                 cfg.FloatOpt('disk_rate',default=0.0,help=''),
+                 cfg.FloatOpt('mem_rate',default=0.0,help='')
+               ]
+CONF = cfg.CONF
+CONF(default_config_files=['/etc/nova/nova.conf'])
+CONF.register_group(billing_group)
+CONF.register_opts(billing_opts, billing_group)
+cpu_rate=CONF.billing.cpu_rate
+disk_rate=CONF.billing.disk_rate
+mem_rate=CONF.billing.mem_rate
+
 ALIAS = "os-simple-tenant-usage"
 authorize = extensions.os_compute_authorizer(ALIAS)
 
@@ -172,6 +187,9 @@ class SimpleTenantUsageController(wsgi.Controller):
                                                  info['hours'])
 
             summary['total_hours'] += info['hours']
+            summary['cpu_bill'] = summary['total_vcpus_usage'] * cpu_rate
+            summary['disk_bill'] = summary['total_local_gb_usage'] * disk_rate
+            summary['mem_bill'] = summary['total_memory_mb_usage'] * mem_rate
             if detailed:
                 summary['server_usages'].append(info)
 
